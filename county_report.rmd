@@ -74,6 +74,7 @@ theme_tb <- theme_bw() +
 
 # Get active cases over the last ten years.
 # Ensure that the oldest year is a full year
+
 actives <- query_actives(
     start_date = as.Date(paste(as.numeric(format(Sys.Date(), "%Y")) - 10,
                                "-01-01", 
@@ -94,10 +95,16 @@ actives_qtr <- count(countyactives[countyactives$date_id > first.qtr$start.date,
 actives_annual <- count(countyactives, "yr_id")
 
 
+# Make sure the x-axis shows all years
+this_year <- as.numeric(format(last.qtr$end.date, "%Y"))
+last_ten <- rev(seq(from = this_year, length.out = 11, by = -1))
 
-ggplot(countyactives, aes(x = yr_id)) +
-    geom_bar(color = "black") +
-    stat_bin(geom="text", aes(label=..count.., vjust = 1.25)) +
+countyactives$yr_num <- as.numeric(countyactives$yr_id)
+
+ggplot(countyactives, aes(x = yr_num)) +
+    geom_bar(binwidth = 1, color = "black", fill = colorwheel[1]) +
+    expand_limits(y = 3) +
+    scale_x_continuous(breaks = last_ten) +
     labs(x = "Quarter Identified", 
          y = "Number of cases") +
     theme_tb + theme(axis.text.x = element_text(angle = 70, 
@@ -109,7 +116,6 @@ ggplot(countyactives, aes(x = yr_id)) +
 
 
 ```{r case_table,results='asis'}
-
 
 actives_print <- ddply(countyactives, .var = "yr_id", .fun = summarise,
                        total = length(report_county)
