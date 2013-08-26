@@ -26,9 +26,7 @@ opts_chunk$set(echo = FALSE,
                message = FALSE,
                warning = TRUE,
                error = TRUE,
-               fig.path = file.path("..",
-                                    "figure",
-                                    x$prefix[1]),
+               fig.path = file.path("..", "figure", x$prefix[1]),
                fig.width=8,
                fig.height=5.6,
                dpi=300,
@@ -65,8 +63,8 @@ theme_tb <- theme_bw() +
 
 
 # Tuberculosis Control Activities for `r paste(x$hd_label[1])`
-# Provided by the Denver Metro TB Control Program
-# `r last.qtr$qtr`
+## Provided by the Denver Metro TB Control Program
+## `r last.qtr$qtr`
 
 
 ## TB Cases in `r paste(x$county_label[1])`
