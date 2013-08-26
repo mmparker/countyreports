@@ -1,0 +1,577 @@
+
+
+
+```{r setup, echo=FALSE,results='hide', message=FALSE, warning=FALSE}
+
+options(stringsAsFactors = FALSE)
+
+# For the report
+library(knitr)
+library(mpmisc)
+library(tbdbaid)
+
+# For graphics
+library(ggplot2)
+library(gridExtra)
+
+# For aggregation
+library(plyr)
+library(reshape2)
+
+
+# Set default chunk options
+opts_chunk$set(echo = FALSE,
+               comment = "",
+               message = FALSE,
+               warning = TRUE,
+               error = TRUE,
+               fig.width=8,
+               fig.height=5.6,
+               dpi=300,
+               out.width="700px",
+               dev="png",
+               cache = FALSE)
+
+
+
+# Set some plot parameters that will want tweaking
+point_size <- 3
+line_size <- 1.3
+colorwheel <- c("#31A354", "#ADDD8E", "#F03B20", "#43A2CA")
+
+
+
+# Get dates for the latest quarter, and for its corresponding quarter two
+# years back
+first.qtr <- get_quarter(Date = Sys.Date(), offset = -9)
+last.qtr <- get_quarter(Date = Sys.Date(), offset = -1)
+
+
+
+# Set up a theme for all the plots
+theme_tb <- theme_bw() +
+            theme(legend.key.width = unit(.75, "inches"))
+
+
+
+
+```
+
+
+# Denver Metro TB Control Program
+# Quarterly Strategic Area Review
+# `r last.qtr$qtr`
+
+Updated at `r paste(Sys.time())`
+
+## TB Cases in the Denver Metropolitan Area
+-------------------------------------------
+
+```{r cases}
+
+# Get active cases over the last ten years.
+# Ensure that the oldest year is a full year
+actives <- query_actives(start_date = as.Date(paste(as.numeric(format(Sys.Date(), "%Y")) - 10,
+                                                    "-01-01", 
+                                                    sep = "")),
+                         stop_date = last.qtr$end.date)
+
+metroactives <- subset(actives, metro_case %in% 'True')
+
+
+# Create a quarter label
+metroactives$plot_qtr <- with(metroactives, paste(yr_id, " Q", qtr_id, sep = ""))
+
+# Create plot labels for county
+metroactives$plot_group <- NA
+metroactives$plot_group[metroactives$report_county %in% "Denver"] <- "Denver"
+metroactives$plot_group[!metroactives$report_county %in% "Denver"] <- "Other Metro Counties"
+
+
+# Aggregate into two years of quarterly counts and ten years of annual counts
+actives_qtr <- count(metroactives[metroactives$date_id > first.qtr$start.date, ], "plot_qtr")
+
+actives_annual <- count(metroactives, "yr_id")
+
+
+
+
+```
+
+
+```{r case_rates}
+
+# Read in the population estimates
+pop <- read.csv("data/metro_pop_estimates.csv")
+
+# Aggregate
+metro_pop <- ddply(pop, .var = "year", .fun = summarise, metro_pop = sum(population))
+
+
+actives_rate <- merge(x = actives_annual,
+                      y = metro_pop,
+                      by.x = "yr_id",
+                      by.y = "year",
+                      all.x = TRUE)
+
+# Fill in any years with missing population estimates using the previous years
+actives_rate$metro_pop[is.na(actives_rate$metro_pop)] <-
+  actives_rate$metro_pop[!is.na(actives_rate$metro_pop)][sum(!is.na(actives_rate$metro_pop))]
+
+
+# Calculate rates
+actives_rate$rate_pht <- with(actives_rate, freq / metro_pop * 1e5)
+
+# For the most recent year, annualize the rate
+actives_rate$rate_pht[actives_rate$yr_id %in% substr(last.qtr$qtr, 1, 4)] <- 
+    with(actives_rate[actives_rate$yr_id %in% substr(last.qtr$qtr, 1, 4), ],
+         freq / metro_pop * (4 / last.qtr$qtr.num * 1e5)
+)
+
+
+# Plot it
+# ggplot(actives_rate, aes(x = plot_qtr, y = rate_pht_annualized, group = 1)) +
+#   geom_point(size = point_size, color = "#31A354") +
+#   geom_line(size = line_size, color = "#31A354") +
+#   expand_limits(y = 0) +
+#   labs(x = "Quarter identified (earliest of date treatment started or date case reported)", 
+#        y = "Annualized rate per 100,000 residents") +
+#   theme_tb
+```
+
+
+### TB Cases by County of Residence
+
+
+```{r cases_by_county}
+
+ggplot(metroactives, aes(x = yr_id, fill = plot_group)) +
+    geom_bar(color = "black") +
+    stat_bin(geom="text", aes(label=..count.., vjust = 1.25)) +
+    scale_fill_manual("Patient's Residence", values = c("#ADDD8E", "#31A354")) +
+    labs(x = "Quarter Identified (earliest of date treatment started or date case reported)", 
+         y = "Number of cases") +
+    theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                hjust = 1.30, 
+                                                vjust = 1.3))
+
+```
+
+
+
+```{r cases_table,results='asis'}
+
+
+actives_print <- ddply(metroactives, .var = "yr_id", .fun = summarise,
+                       total = length(report_county),
+                       denver = sum(report_county %in% 'Denver'),
+                       metro = total - denver,
+                       denverprop = as.integer(denver / total * 100)
+)
+
+actives_print <- merge(x = actives_print,
+                       y = actives_rate[ , c("yr_id", "rate_pht")],
+                       by = "yr_id",
+                       all.x = TRUE)
+                       
+
+# Print it with nice names
+names(actives_print) <- c("Year", "Total Cases", "Denver", "Other Metro Counties",
+                          "% Denver", "Rate per 100k")
+
+dfprintif(actives_print)
+
+
+```
+
+
+### TB Cases in Metropolitan Denver, by Quarter
+
+```{r total_cases}
+
+
+ggplot(actives_qtr, aes(x = plot_qtr, y = freq, group = 1)) +
+    geom_point(size = point_size, color = "#31A354") +
+    geom_line(size = line_size, color = "#31A354") +
+    expand_limits(y = 0) +
+    labs(x = "Quarter identified (earliest of date treatment started or date case reported)", 
+         y = "Number of cases") +
+    theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                hjust = 1.30, 
+                                                vjust = 1.3))
+
+
+```
+
+
+## Patient Visits by Location
+-------------------------------------------
+
+
+
+```{r visits_inout}
+
+
+visits <- query_visits(start_date = first.qtr$start.date,
+                       stop_date = last.qtr$end.date)
+
+visits$plot_qtr <- with(visits, paste(visit_yr, " Q", visit_qtr, sep = ""))
+
+locagg <- count(subset(visits, location %in% c("Clinic", "Outreach")),
+                vars = c("plot_qtr", "location"))
+
+qtragg <- count(subset(visits, location %in% c("Clinic", "Outreach")),
+                vars = "plot_qtr")
+
+qtragg$location <- "All Visits"
+
+visitagg <- rbind(locagg, qtragg)
+
+ggplot(visitagg, aes(x = plot_qtr, y = freq, group = location, color = location)) +
+    geom_point(size = point_size) +
+    geom_line(aes(linetype = location), size = line_size) +
+    expand_limits(y = 0) +
+    scale_color_manual("Visit Location", values = colorwheel[1:3]) +
+    scale_linetype_discrete("Visit Location") +
+    labs(x = "Visit date", 
+         y = "Number of visits") +
+    theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                hjust = 1.30, 
+                                                vjust = 1.3))
+```
+
+
+```{r visits_table, results='asis'}
+
+# Cast visits wide
+visits_wide <- dcast(visitagg, plot_qtr ~ location, value.var = "freq")
+
+# Pretty-print
+names(visits_wide) <- c("Quarter", "Total Visits", "Clinic Visits", "Outreach Visits")
+
+dfprintif(visits_wide)
+
+```
+
+
+## Screenings for Active and Latent Tuberculosis
+-------------------------------------------
+```{r screens}
+
+# Query test results for the period
+tests <- query_tests(start_date = first.qtr$start.date,
+                     stop_date = last.qtr$end.date)
+
+# Convert date to quarter
+tests$plot_qtr <- with(tests, paste(test_yr, " Q", test_qtr, sep = ""))
+
+# Aggregate by quarter
+testagg <- count(tests, vars = c("test", "plot_qtr"))
+
+
+# Plot it
+ggplot(testagg, aes(x = plot_qtr, y = freq, group = test, color = test)) +
+    geom_point(size = point_size) +
+    geom_line(aes(linetype = test), size = line_size) +
+    expand_limits(y = 0) +
+    scale_color_manual("Diagnostic", values = colorwheel[1:3]) +
+    scale_linetype_discrete("Diagnostic") +
+    labs(x = "Diagnostic date", 
+         y = "Number of diagnostics") +
+    theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                hjust = 1.30, 
+                                                vjust = 1.3))
+```
+
+
+```{r screens_table, results='asis'}
+
+# Cast tests wide
+tests_wide <- dcast(testagg, plot_qtr ~ test, value.var = "freq")
+
+# Pretty-print
+names(tests_wide) <- c("Quarter", "CXRs", "QFTs", "TSTs")
+
+dfprintif(tests_wide)
+
+```
+
+
+
+
+
+## Treatment Initiation and Completion
+-------------------------------------------
+
+```{r plan_start}
+
+# Get the plan starts from the last 9 quarters
+plan_starts <- query_tx_plans(start_date = get_quarter(Date = Sys.Date(),
+                                                       offset = -9)$start.date,
+                              stop_date = get_quarter(Date = Sys.Date(),
+                                                      offset = -1)$end.date)
+
+
+# Create a quarter label
+plan_starts$plot_qtr <- with(plan_starts, paste(plan_yr, " Q", plan_qtr, sep = ""))
+
+plan_summary <- ddply(plan_starts, .var = "plot_qtr", .fun = summarise,
+                      Active = sum(treat_plan_type %in% "Active"),
+                      LTBI = sum(treat_plan_type %in% "LTBI"),
+                      RIF = sum(ltbi_drug %in% "RIF"),
+                      INH = sum(ltbi_drug %in% "INH"),
+                      `INH/Rifapentine` = sum(ltbi_drug %in% "INH/Rifapentine")
+)
+
+
+```
+
+
+
+
+
+### Treatment Plans Initiated by Type
+
+```{r tx_init}
+
+plan_melt <- melt(plan_summary, id.var = "plot_qtr")
+
+act_ltbi_init <- subset(plan_melt, variable %in% c("Active", "LTBI"))
+
+
+ggplot(act_ltbi_init, aes(x = plot_qtr, y = value, group = variable, color = variable)) +
+    geom_point(size = point_size) +
+    geom_line(aes(linetype = variable), size = line_size) +
+    expand_limits(y = 0) +
+    scale_color_manual("Plan Type", values = colorwheel[1:2]) +
+    scale_linetype_manual("Plan Type", values = c(1, 2)) +
+    labs(x = "Quarter initiated", 
+         y = "Number of patients") +
+    theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                hjust = 1.30, 
+                                                vjust = 1.3))
+
+```
+
+
+
+```{r tx_init_table, results='asis'}
+
+# Pretty names
+names(plan_summary) <- c("Quarter", "Active", "LTBI", "Rifampin", "INH", "INH/Rifapentine")
+
+dfprintif(plan_summary)
+
+
+
+```
+
+
+### Completion of Active Therapy
+
+```{r active_comp}
+
+
+# Query plans again for completion rates, shifting the window back three quarters;
+# those nine months allow for active and INH completion.
+latest_plans <- query_latest_plans(start_date = get_quarter(Date = Sys.Date(),
+                                                           offset = -12)$start.date,
+                                   stop_date = get_quarter(Date = Sys.Date(),
+                                                           offset = -4)$end.date)
+
+
+# Create a quarter label
+latest_plans$plot_qtr <- with(latest_plans, 
+                              paste(plan_yr, " Q", plan_qtr, sep = ""))
+
+
+# Calculate completion rates for active tx
+act_comp <- ddply(subset(latest_plans, treat_plan_type %in% "Active"),
+                 .var = "plot_qtr", .fun = summarise,
+                 n = sum(completion_status %in% c("Completed", "Not Completed", "Ongoing")),
+                 n_complete = sum(completion_status %in% "Completed"),
+                 n_incomplete = sum(completion_status %in% "Not Completed"),
+                 n_ongoing = sum(completion_status %in% "Ongoing"),
+                 per_complete = n_complete / n * 100)
+
+
+# Pull in the national averages and national targets
+nat_avg <- read.csv(file.path("data", "ntip_stats.csv"))
+
+# Add the quarter label
+nat_avg$plot_qtr <- with(nat_avg, paste(year, " Q", qtr, sep = ""))
+
+# Subset to only the quarters in the Denver data
+nat_avg_sub <- subset(nat_avg, plot_qtr %in% act_comp$plot_qtr)
+
+# Melt it so that average and target are separate records
+nat_melt <- melt(nat_avg_sub, 
+                 id.var = "plot_qtr", 
+                 measure.var = c("national_average", "target_2015"))
+
+
+# Tidy up the variable labels and column names for stacking
+nat_melt$variable <- as.character(nat_melt$variable)
+nat_melt$variable[nat_melt$variable %in% "national_average"] <- "National Average*"
+nat_melt$variable[nat_melt$variable %in% "target_2015"] <- "National 2015 Target* (93%)"
+
+act_comp$variable <- "All Denver Metro Cases"
+
+names(nat_melt)[names(nat_melt) %in% "value"] <- "per_complete"
+
+
+# Combine our data, the national average, and the national targets
+act_plot <- rbind(act_comp[ , c("plot_qtr", "per_complete", "variable")],
+                  nat_melt)
+
+
+
+# Plot it
+ggplot(act_plot, aes(x = plot_qtr, y = per_complete, color = variable, group = variable)) +
+ geom_point(size = point_size) +
+ geom_line(aes(linetype = variable), size = line_size) +
+ expand_limits(y = c(0, 100)) +
+ scale_color_manual("Statistic", values = colorwheel[1:3]) +
+ scale_linetype_discrete("Statistic") +
+ labs(x = "Quarter",
+      y = "Percent Completed") +
+    theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                hjust = 1.30, 
+                                                vjust = 1.3))
+
+
+```
+
+
+```{r active_comp_table, results='asis'}
+
+# Set up a version to print
+act_print <- act_comp[ , c("plot_qtr", "n", 
+                           "n_complete", "n_incomplete", 
+                           "n_ongoing", "per_complete")]
+
+
+# Pretty names
+names(act_print) <- c("Quarter", "N Started", 
+                      "N Completed", "N Not Completed", 
+                      "N Ongoing", "% Complete")
+
+
+dfprintif(act_print)
+
+
+
+```
+
+
+
+### Patients on Active Therapy Marked as Incomplete or Ongoing
+```{r act_inc,results='asis'}
+
+act_inc <- subset(latest_plans,
+                  subset = treat_plan_type %in% "Active" &
+                           completion_status %in% c("Ongoing", "Not Completed"),
+                  select = c("person_id", "plot_qtr", "treat_plan", 
+                             "completion_status", "reason_stopped", "plan_author")
+)
+
+dfprintif(arrange(act_inc, plot_qtr, person_id),
+          norowmsg = "All active therapy during this period appears to be completed.")
+
+```
+
+
+# Completion of LTBI Therapy
+
+
+```{r ltbi_comp}
+
+# Exclude any INH/Rifpentine plans before 2012
+plans_trim <- latest_plans[!(latest_plans$ltbi_drug %in% "INH/Rifapentine" & 
+                             latest_plans$plan_yr < 2012), ]
+
+
+# Calculate completion rates for latent tx
+ltbi_comp <- ddply(subset(plans_trim, ltbi_drug %in% c("RIF", "INH", "INH/Rifapentine")),
+                   .var = c("ltbi_drug", "plot_qtr"),
+                   .fun = summarise,
+                   
+           n = sum(completion_status %in% c("Completed", "Not Completed", "Ongoing")),
+           n_complete = sum(completion_status %in% "Completed"),
+           n_incomplete = sum(completion_status %in% "Not Completed"),
+           n_ongoing = sum(completion_status %in% "Ongoing"),
+           per_complete = n_complete / n * 100,
+           per_incomplete = n_incomplete / n * 100,
+           per_ongoing = n_ongoing / n * 100
+)
+
+
+# Add the national target
+ltbi_plot <- rbind(ltbi_comp[ , c("plot_qtr", "ltbi_drug", "per_complete")],
+                   data.frame(plot_qtr = sort(unique(ltbi_comp[ , "plot_qtr"])),
+                              ltbi_drug = "National 2015 Target* (79%)",
+                              per_complete = 79)
+)
+
+
+# Plot it
+ggplot(ltbi_plot, aes(x = plot_qtr, y = per_complete, group = ltbi_drug, color = ltbi_drug)) +
+    geom_point(size = point_size) +
+    geom_line(aes(linetype = ltbi_drug), size = line_size) +
+    expand_limits(y = c(0, 100)) +
+    scale_color_manual("Regimen", values = colorwheel[1:4]) +
+    scale_linetype_discrete("Regimen") +
+    labs(x = "Quarter",
+         y = "Percent Completed") +
+    theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                hjust = 1.30, 
+                                                vjust = 1.3))
+
+
+```
+
+```{r ltbi_comp_table, results='asis'}
+
+# Set up a version to print
+ltbi_print <- ltbi_comp[ , c("ltbi_drug", "plot_qtr", "n", 
+                             "n_complete", "per_complete", 
+                             "n_incomplete", "per_incomplete",
+                             "n_ongoing", "per_ongoing")]
+
+
+# Pretty names
+names(ltbi_print) <- c("LTBI Regimen", "Quarter", "N Started", 
+                       "N Completed", "% Complete",
+                       "N Not Completed", "% Not Completed",
+                       "N Ongoing", "% Ongoing")
+
+
+dfprintif(ltbi_print)
+
+
+
+```
+
+
+
+### Patients on LTBI Therapy Marked as Ongoing
+```{r ltbi_inc,results='asis'}
+
+ltbi_inc <- subset(latest_plans,
+                  subset = treat_plan_type %in% "LTBI" &
+                           completion_status %in% "Ongoing",
+                  select = c("person_id", "plot_qtr", "treat_plan", 
+                             "completion_status", "reason_stopped", "plan_author")
+)
+
+dfprintif(arrange(ltbi_inc, plot_qtr, person_id),
+          norowmsg = "All LTBI therapy during this period appears to be completed or abandoned.")
+
+```
+
+
+```{r cleanup}
+
+
+
+```
