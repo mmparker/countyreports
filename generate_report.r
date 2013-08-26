@@ -75,13 +75,11 @@ lapply(counties, function(x) {
 
     mdfile <- file.path("temp", "county_report.md")
 
-    htmlfile <- file.path("reports", 
-                          paste(x$hd_label[1], 
-                                " ",
-                                qtr_label, 
-                                ".html",
-                                sep = "")
-    )
+    htmlfile <- paste(x$hd_label[1], 
+                      " ",
+                      qtr_label, 
+                      ".html",
+                      sep = "")
 
 
 
