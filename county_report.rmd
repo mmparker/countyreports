@@ -63,8 +63,8 @@ theme_tb <- theme_bw() +
 
 
 # Tuberculosis Control Activities for `r paste(x$hd_label[1])`
-## Provided by the Denver Metro TB Control Program
 ## `r last.qtr$qtr`
+### Provided by the Denver Metro TB Control Program
 
 
 ## TB Cases in `r paste(x$county_label[1])`
