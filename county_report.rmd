@@ -103,7 +103,7 @@ ggplot(countyactives, aes(x = yr_plot)) +
              color = "white") +
     expand_limits(y = c(0, 3)) +
     scale_x_discrete(drop = FALSE) +
-    labs(x = "Quarter Identified", 
+    labs(x = "Year Identified", 
          y = "Number of cases",
          title = "Number of Active TB Cases by Year Identified") +
     theme_tb
