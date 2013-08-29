@@ -304,7 +304,11 @@ plan_starts_co <- subset(plan_starts, county %in% x$county)
 # Create a quarter label
 plan_starts_co$plot_qtr <- with(plan_starts_co, paste(plan_yr, " Q", plan_qtr, sep = ""))
 
-plan_summary <- ddply(plan_starts_co, .var = "plot_qtr", .fun = summarise,
+plan_summary <- ddply(plan_starts_co, 
+                      .var = "plot_qtr", 
+                      .drop = FALSE,
+                      .fun = summarise,
+
                       Active = sum(treat_plan_type %in% "Active"),
                       LTBI = sum(treat_plan_type %in% "LTBI"),
                       RIF = sum(ltbi_drug %in% "RIF"),
@@ -377,19 +381,30 @@ latest_plans_co <- subset(latest_plans, county %in% x$county)
 
 # Create a quarter label
 latest_plans_co$plot_qtr <- with(latest_plans_co, 
-                                 paste(plan_yr, " Q", plan_qtr, sep = ""))
+
+    # Make it a factor
+    factor(paste(plan_yr, " Q", plan_qtr, sep = ""),
+           levels = qtr.seq,
+           ordered = TRUE)
+
+)
 
 
 # Calculate completion rates for active tx
 act_comp <- ddply(subset(latest_plans_co, treat_plan_type %in% "Active"),
-                 .var = "plot_qtr", .fun = summarise,
+                 .var = "plot_qtr", 
+                 .drop = FALSE,
+                 .fun = summarise,
+
                  n = sum(completion_status %in% c("Completed", 
                                                   "Not Completed", 
                                                   "Ongoing")),
                  n_complete = sum(completion_status %in% "Completed"),
                  n_incomplete = sum(completion_status %in% "Not Completed"),
                  n_ongoing = sum(completion_status %in% "Ongoing"),
-                 per_complete = n_complete / n * 100)
+                 per_complete = calc_percent(n_complete, n)
+                 
+)
 
 
 # Pull in the national averages and national targets
@@ -480,17 +495,21 @@ plans_trim <-
 
 
 # Calculate completion rates for latent tx
-ltbi_comp <- ddply(subset(plans_trim, ltbi_drug %in% c("RIF", "INH", "INH/Rifapentine")),
+ltbi_comp <- ddply(subset(plans_trim, 
+                          ltbi_drug %in% c("RIF", "INH", "INH/Rifapentine")),
                    .var = c("ltbi_drug", "plot_qtr"),
+                   .drop = FALSE,
                    .fun = summarise,
                    
-           n = sum(completion_status %in% c("Completed", "Not Completed", "Ongoing")),
+           n = sum(completion_status %in% c("Completed", 
+                                            "Not Completed", 
+                                            "Ongoing")),
            n_complete = sum(completion_status %in% "Completed"),
            n_incomplete = sum(completion_status %in% "Not Completed"),
            n_ongoing = sum(completion_status %in% "Ongoing"),
-           per_complete = n_complete / n * 100,
-           per_incomplete = n_incomplete / n * 100,
-           per_ongoing = n_ongoing / n * 100
+           per_complete = calc_percent(n_complete, n),
+           per_incomplete = calc_percent(n_incomplete, n),
+           per_ongoing = calc_percent(n_ongoing, n)
 )
 
 
