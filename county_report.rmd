@@ -471,7 +471,7 @@ dfprintif(act_print)
 
 
 
-# Completion of LTBI Therapy
+### Completion of LTBI Therapy
 
 
 ```{r ltbi_comp}
