@@ -402,7 +402,7 @@ act_comp <- ddply(subset(latest_plans_co, treat_plan_type %in% "Active"),
                  n_complete = sum(completion_status %in% "Completed"),
                  n_incomplete = sum(completion_status %in% "Not Completed"),
                  n_ongoing = sum(completion_status %in% "Ongoing"),
-                 per_complete = calc_percent(n_complete, n)
+                 per_complete = calc_percent(n_complete, n, digits = 2)
                  
 )
 
@@ -507,9 +507,9 @@ ltbi_comp <- ddply(subset(plans_trim,
            n_complete = sum(completion_status %in% "Completed"),
            n_incomplete = sum(completion_status %in% "Not Completed"),
            n_ongoing = sum(completion_status %in% "Ongoing"),
-           per_complete = calc_percent(n_complete, n),
-           per_incomplete = calc_percent(n_incomplete, n),
-           per_ongoing = calc_percent(n_ongoing, n)
+           per_complete = calc_percent(n_complete, n, digits = 2),
+           per_incomplete = calc_percent(n_incomplete, n, digits = 2),
+           per_ongoing = calc_percent(n_ongoing, n, digits = 2)
 )
 
 
