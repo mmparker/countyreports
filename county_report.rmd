@@ -204,6 +204,7 @@ ggplot(visitagg, aes(x = plot_qtr,
     geom_point(size = point_size) +
     geom_line(aes(linetype = location), size = line_size) +
     expand_limits(y = 0) +
+    scale_x_discrete(breaks = qtr.seq[4:12]) +
     scale_color_manual("Visit Location", values = colorwheel[1:3]) +
     scale_linetype_discrete("Visit Location") +
     labs(x = "Visit date", 
@@ -254,6 +255,7 @@ ggplot(testagg, aes(x = plot_qtr, y = freq, group = test, color = test)) +
     geom_point(size = point_size) +
     geom_line(aes(linetype = test), size = line_size) +
     expand_limits(y = 0) +
+    scale_x_discrete(breaks = qtr.seq[4:12]) +
     scale_color_manual("Diagnostic", values = colorwheel[1:3]) +
     scale_linetype_discrete("Diagnostic") +
     labs(x = "Diagnostic date", 
@@ -261,6 +263,7 @@ ggplot(testagg, aes(x = plot_qtr, y = freq, group = test, color = test)) +
     theme_tb + theme(axis.text.x = element_text(angle = 70, 
                                                 hjust = 1.30, 
                                                 vjust = 1.3))
+
 ```
 
 
@@ -374,13 +377,7 @@ latest_plans_co <- subset(latest_plans, county %in% x$county)
 
 # Create a quarter label
 latest_plans_co$plot_qtr <- with(latest_plans_co, 
-
-    # Make it a factor
-    factor(paste(plan_yr, " Q", plan_qtr, sep = ""),
-           levels = qtr.seq,
-           ordered = TRUE)
-
-)
+                                 paste(plan_yr, " Q", plan_qtr, sep = ""))
 
 
 # Calculate completion rates for active tx
