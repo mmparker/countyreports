@@ -36,7 +36,7 @@ library(reshape2)
 opts_chunk$set(echo = FALSE,
                comment = "",
                message = FALSE,
-               warning = TRUE,
+               warning = FALSE,
                error = TRUE,
                fig.path = file.path("figure", x$prefix[1]),
                fig.width=8,
