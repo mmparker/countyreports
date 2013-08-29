@@ -25,6 +25,7 @@ library(tbdbaid)
 # For graphics
 library(ggplot2)
 library(gridExtra)
+library(lubridate)
 
 # For aggregation
 library(plyr)
@@ -59,6 +60,23 @@ colorwheel <- c("#31A354", "#ADDD8E", "#F03B20", "#43A2CA")
 first.qtr <- get_quarter(Date = Sys.Date(), offset = -9)
 last.qtr <- get_quarter(Date = Sys.Date(), offset = -1)
 
+
+# Generate the full sequence of quarters that might be reported in
+# the report - first.qtr goes back nine, but active tx completion
+# actually goes back 12
+qtr.seq <- sapply(seq(from = get_quarter(Date = Sys.Date(),
+                                         offset = -12)$start.date,
+                      to = last.qtr$end.date,
+                      by = "3 months"),
+                  simplify = "vector",
+                  FUN = function(x) {
+
+    # Extract the quarter label from the get_quarter results
+    get_quarter(x)$qtr
+
+})
+
+    
 
 
 # Set up a theme for all the plots
@@ -340,8 +358,8 @@ dfprintif(plan_summary)
 ```{r active_comp}
 
 
-# Query plans again for completion rates, shifting the window back three quarters;
-# those nine months allow for active and INH completion.
+# Query plans again for completion rates, shifting the window back 
+# three quarters; those nine months allow for active and INH completion.
 latest_plans <- add_county(
     query_latest_plans(start_date = get_quarter(Date = Sys.Date(),
                                                 offset = -12)$start.date,
@@ -356,13 +374,21 @@ latest_plans_co <- subset(latest_plans, county %in% x$county)
 
 # Create a quarter label
 latest_plans_co$plot_qtr <- with(latest_plans_co, 
-                              paste(plan_yr, " Q", plan_qtr, sep = ""))
+
+    # Make it a factor
+    factor(paste(plan_yr, " Q", plan_qtr, sep = ""),
+           levels = qtr.seq,
+           ordered = TRUE)
+
+)
 
 
 # Calculate completion rates for active tx
 act_comp <- ddply(subset(latest_plans_co, treat_plan_type %in% "Active"),
                  .var = "plot_qtr", .fun = summarise,
-                 n = sum(completion_status %in% c("Completed", "Not Completed", "Ongoing")),
+                 n = sum(completion_status %in% c("Completed", 
+                                                  "Not Completed", 
+                                                  "Ongoing")),
                  n_complete = sum(completion_status %in% "Completed"),
                  n_incomplete = sum(completion_status %in% "Not Completed"),
                  n_ongoing = sum(completion_status %in% "Ongoing"),
@@ -376,7 +402,7 @@ nat_avg <- read.csv(file.path("data", "ntip_stats.csv"))
 nat_avg$plot_qtr <- with(nat_avg, paste(year, " Q", qtr, sep = ""))
 
 # Subset to only the quarters in the Denver data
-nat_avg_sub <- subset(nat_avg, plot_qtr %in% act_comp$plot_qtr)
+nat_avg_sub <- subset(nat_avg, plot_qtr %in% qtr.seq[1:9])
 
 # Melt it so that average and target are separate records
 nat_melt <- melt(nat_avg_sub, 
@@ -386,10 +412,14 @@ nat_melt <- melt(nat_avg_sub,
 
 # Tidy up the variable labels and column names for stacking
 nat_melt$variable <- as.character(nat_melt$variable)
-nat_melt$variable[nat_melt$variable %in% "national_average"] <- "National Average*"
-nat_melt$variable[nat_melt$variable %in% "target_2015"] <- "National 2015 Target* (93%)"
 
-act_comp$variable <- "All Denver Metro Cases"
+nat_melt$variable[nat_melt$variable %in% "national_average"] <- 
+    "National Average*"
+
+nat_melt$variable[nat_melt$variable %in% "target_2015"] <- 
+    "National 2015 Target* (93%)"
+
+act_comp$variable <- "Cases in County"
 
 names(nat_melt)[names(nat_melt) %in% "value"] <- "per_complete"
 
@@ -401,17 +431,19 @@ act_plot <- rbind(act_comp[ , c("plot_qtr", "per_complete", "variable")],
 
 
 # Plot it
-ggplot(act_plot, aes(x = plot_qtr, y = per_complete, color = variable, group = variable)) +
- geom_point(size = point_size) +
- geom_line(aes(linetype = variable), size = line_size) +
- expand_limits(y = c(0, 100)) +
- scale_color_manual("Statistic", values = colorwheel[1:3]) +
- scale_linetype_discrete("Statistic") +
- labs(x = "Quarter",
-      y = "Percent Completed") +
-    theme_tb + theme(axis.text.x = element_text(angle = 70, 
-                                                hjust = 1.30, 
-                                                vjust = 1.3))
+ggplot(act_plot, aes(x = plot_qtr, y = per_complete, 
+                     color = variable, group = variable)) +
+    geom_point(size = point_size) +
+    geom_line(aes(linetype = variable), size = line_size) +
+    expand_limits(y = c(0, 100)) +
+    scale_x_discrete(breaks = qtr.seq[1:9], drop = FALSE) +
+    scale_color_manual("Statistic", values = colorwheel[1:3]) +
+    scale_linetype_discrete("Statistic") +
+    labs(x = "Quarter",
+         y = "Percent Completed") +
+       theme_tb + theme(axis.text.x = element_text(angle = 70, 
+                                                   hjust = 1.30, 
+                                                   vjust = 1.3))
 
 
 ```
