@@ -510,6 +510,7 @@ ggplot(ltbi_plot, aes(x = plot_qtr, y = per_complete, group = ltbi_drug, color =
     geom_point(size = point_size) +
     geom_line(aes(linetype = ltbi_drug), size = line_size) +
     expand_limits(y = c(0, 100)) +
+    scale_x_discrete(breaks = qtr.seq[1:9], drop = FALSE) +
     scale_color_manual("Regimen", values = colorwheel[1:4]) +
     scale_linetype_discrete("Regimen") +
     labs(x = "Quarter",
