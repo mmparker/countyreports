@@ -176,7 +176,13 @@ visits_co <- subset(visits, county %in% x$county)
 
 # Add a plot quarter label
 visits_co$plot_qtr <- with(visits_co, 
-                           paste(visit_yr, " Q", visit_qtr, sep = ""))
+
+    # Make it a factor
+    factor(paste(visit_yr, " Q", visit_qtr, sep = ""),
+           levels = qtr.seq[4:12],
+           ordered = TRUE)
+
+)
 
 
 # Aggregate by quarter and location
@@ -204,7 +210,7 @@ ggplot(visitagg, aes(x = plot_qtr,
     geom_point(size = point_size) +
     geom_line(aes(linetype = location), size = line_size) +
     expand_limits(y = 0) +
-    scale_x_discrete(breaks = qtr.seq[4:12]) +
+    scale_x_discrete(breaks = qtr.seq[4:12], drop = FALSE) +
     scale_color_manual("Visit Location", values = colorwheel[1:3]) +
     scale_linetype_discrete("Visit Location") +
     labs(x = "Visit date", 
@@ -244,7 +250,15 @@ tests <- add_county(query_tests(start_date = first.qtr$start.date,
 tests_co <- subset(tests, county %in% x$county)
 
 # Convert date to quarter
-tests_co$plot_qtr <- with(tests_co, paste(test_yr, " Q", test_qtr, sep = ""))
+tests_co$plot_qtr <- with(tests_co, 
+                          
+    # Make it a factor
+    factor(paste(test_yr, " Q", test_qtr, sep = ""),
+           levels = qtr.seq[4:12],
+           ordered = TRUE)
+
+)
+
 
 # Aggregate by quarter
 testagg <- count(tests_co, vars = c("test", "plot_qtr"))
@@ -255,7 +269,7 @@ ggplot(testagg, aes(x = plot_qtr, y = freq, group = test, color = test)) +
     geom_point(size = point_size) +
     geom_line(aes(linetype = test), size = line_size) +
     expand_limits(y = 0) +
-    scale_x_discrete(breaks = qtr.seq[4:12]) +
+    scale_x_discrete(breaks = qtr.seq[4:12], drop = FALSE) +
     scale_color_manual("Diagnostic", values = colorwheel[1:3]) +
     scale_linetype_discrete("Diagnostic") +
     labs(x = "Diagnostic date", 
@@ -332,10 +346,22 @@ plan_melt <- melt(plan_summary, id.var = "plot_qtr")
 act_ltbi_init <- subset(plan_melt, variable %in% c("Active", "LTBI"))
 
 
+# Convert the plot_qtr variable to a factor
+act_ltbi_init$plot_qtr <- with(act_ltbi_init,
+
+    # Make it a factor
+    factor(plot_qtr,
+           levels = qtr.seq[4:12],
+           ordered = TRUE)
+
+)
+
+
 ggplot(act_ltbi_init, aes(x = plot_qtr, y = value, group = variable, color = variable)) +
     geom_point(size = point_size) +
     geom_line(aes(linetype = variable), size = line_size) +
     expand_limits(y = 0) +
+    scale_x_discrete(breaks = qtr.seq[4:12], drop = FALSE) +
     scale_color_manual("Plan Type", values = colorwheel[1:2]) +
     scale_linetype_manual("Plan Type", values = c(1, 2)) +
     labs(x = "Quarter initiated", 
@@ -384,7 +410,7 @@ latest_plans_co$plot_qtr <- with(latest_plans_co,
 
     # Make it a factor
     factor(paste(plan_yr, " Q", plan_qtr, sep = ""),
-           levels = qtr.seq,
+           levels = qtr.seq[1:9],
            ordered = TRUE)
 
 )
