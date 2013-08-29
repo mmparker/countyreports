@@ -439,22 +439,6 @@ dfprintif(act_print)
 
 
 
-### Patients on Active Therapy Marked as Incomplete or Ongoing
-```{r act_inc,results='asis'}
-
-act_inc <- subset(latest_plans_co,
-                  subset = treat_plan_type %in% "Active" &
-                           completion_status %in% c("Ongoing", "Not Completed"),
-                  select = c("person_id", "plot_qtr", "treat_plan", 
-                             "completion_status", "reason_stopped", "plan_author")
-)
-
-dfprintif(arrange(act_inc, plot_qtr, person_id),
-          norowmsg = "All active therapy during this period appears to be completed.")
-
-```
-
-
 # Completion of LTBI Therapy
 
 
@@ -528,21 +512,6 @@ dfprintif(ltbi_print)
 ```
 
 
-
-### Patients on LTBI Therapy Marked as Ongoing
-```{r ltbi_inc,results='asis'}
-
-ltbi_inc <- subset(latest_plans_co,
-                  subset = treat_plan_type %in% "LTBI" &
-                           completion_status %in% "Ongoing",
-                  select = c("person_id", "plot_qtr", "treat_plan", 
-                             "completion_status", "reason_stopped", "plan_author")
-)
-
-dfprintif(arrange(ltbi_inc, plot_qtr, person_id),
-          norowmsg = "All LTBI therapy during this period appears to be completed or abandoned.")
-
-```
 
 
 ```{r cleanup}
