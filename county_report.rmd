@@ -443,7 +443,7 @@ act_plot <- rbind(act_comp[ , c("plot_qtr", "per_complete", "variable")],
 
 
 # Plot it
-ggplot(act_plot, aes(x = plot_qtr, y = per_complete, 
+ggplot(act_plot, aes(x = plot_qtr, y = as.numeric(per_complete), 
                      color = variable, group = variable)) +
     geom_point(size = point_size) +
     geom_line(aes(linetype = variable), size = line_size) +
@@ -522,7 +522,10 @@ ltbi_plot <- rbind(ltbi_comp[ , c("plot_qtr", "ltbi_drug", "per_complete")],
 
 
 # Plot it
-ggplot(ltbi_plot, aes(x = plot_qtr, y = per_complete, group = ltbi_drug, color = ltbi_drug)) +
+ggplot(ltbi_plot, aes(x = plot_qtr, 
+                      y = as.numeric(per_complete), 
+                      group = ltbi_drug, 
+                      color = ltbi_drug)) +
     geom_point(size = point_size) +
     geom_line(aes(linetype = ltbi_drug), size = line_size) +
     expand_limits(y = c(0, 100)) +
