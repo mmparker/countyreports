@@ -458,21 +458,38 @@ act_comp$variable <- paste(x$hd_tag[1], "Active TB Patients")
 
 names(nat_melt)[names(nat_melt) %in% "value"] <- "per_complete"
 
+nat_melt$n <- median(act_comp$n, na.rm = TRUE) + 1
+
 
 # Combine our data, the national average, and the national targets
-act_plot <- rbind(act_comp[ , c("plot_qtr", "per_complete", "variable")],
+act_plot <- rbind(act_comp[ , c("plot_qtr", "n", "per_complete", "variable")],
                   nat_melt)
 
 
 
+
+# Determine appropriate point size breaks
+# Breaks are by one when maximum n is less than 10, and by
+# max mod 5 when larger than 10
+act_breaks <- seq(from = min(act_plot$n, na.rm = TRUE),
+              to = max(act_plot$n, na.rm = TRUE),
+              by = max(1, max(act_plot$n, na.rm = TRUE) %/% 5)
+)
+
+
 # Plot it
-ggplot(act_plot, aes(x = plot_qtr, y = as.numeric(per_complete), 
-                     color = variable, group = variable)) +
-    geom_point(size = point_size) +
+ggplot(act_plot, aes(x = plot_qtr, 
+                     y = as.numeric(per_complete), 
+                     color = variable, 
+                     group = variable)) +
+    geom_point(aes(size = as.integer(n))) +
     geom_line(aes(linetype = variable), size = line_size) +
     expand_limits(y = c(0, 100)) +
     scale_x_discrete(breaks = qtr.seq[1:9], drop = FALSE) +
     scale_color_manual("Statistic", values = colorwheel[1:3]) +
+    scale_size_continuous("Number of Patients",
+                          limits = c(1, max(act_plot$n, na.rm = TRUE)),
+                          breaks = act_breaks) +
     scale_linetype_discrete("Statistic") +
     labs(x = "Quarter",
          y = "Percent Completed") +
@@ -540,10 +557,19 @@ ltbi_comp <- ddply(subset(plans_trim,
 ltbi_comp$label <- paste(x$hd_tag[1], "LTBI Patients")
 
 # Add the national target
-ltbi_plot <- rbind(ltbi_comp[ , c("plot_qtr", "label", "per_complete")],
+ltbi_plot <- rbind(ltbi_comp[ , c("plot_qtr", "label", "n", "per_complete")],
                    data.frame(plot_qtr = sort(unique(ltbi_comp[ , "plot_qtr"])),
                               label = "National 2015 Target* (79%)",
+                              n = median(ltbi_comp$n, na.rm = TRUE) + 1,
                               per_complete = 79)
+)
+
+# Determine appropriate point size breaks
+# Breaks are by one when maximum n is less than 10, and by
+# max mod 5 when larger than 10
+ltbi_breaks <- seq(from = min(ltbi_plot$n, na.rm = TRUE),
+              to = max(ltbi_plot$n, na.rm = TRUE),
+              by = max(1, max(ltbi_plot$n, na.rm = TRUE) %/% 5)
 )
 
 
@@ -552,11 +578,14 @@ ggplot(ltbi_plot, aes(x = plot_qtr,
                       y = as.numeric(per_complete),
                       group = label,
                       color = label)) +
-    geom_point(size = point_size) +
+    geom_point(aes(size = n)) +
     geom_line(aes(linetype = label), size = line_size) +
     expand_limits(y = c(0, 100)) +
     scale_x_discrete(breaks = qtr.seq[1:9], drop = FALSE) +
     scale_color_manual("Regimen", values = colorwheel[1:4]) +
+    scale_size_continuous("Number of Patients",
+                          limits = c(1, max(ltbi_plot$n, na.rm = TRUE)),
+                          breaks = ltbi_breaks) +
     scale_linetype_discrete("Regimen") +
     labs(x = "Quarter",
          y = "Percent Completed") +
