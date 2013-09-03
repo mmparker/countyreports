@@ -487,9 +487,9 @@ ggplot(act_plot, aes(x = plot_qtr,
     expand_limits(y = c(0, 100)) +
     scale_x_discrete(breaks = qtr.seq[1:9], drop = FALSE) +
     scale_color_manual("Statistic", values = colorwheel[1:3]) +
-    scale_size_continuous("Number of Patients",
-                          limits = c(1, max(act_plot$n, na.rm = TRUE)),
-                          breaks = act_breaks) +
+    scale_size_area("Number of Patients",
+                    limits = c(1, max(act_plot$n, na.rm = TRUE)),
+                    breaks = act_breaks) +
     scale_linetype_discrete("Statistic") +
     labs(x = "Quarter",
          y = "Percent Completed") +
@@ -583,9 +583,9 @@ ggplot(ltbi_plot, aes(x = plot_qtr,
     expand_limits(y = c(0, 100)) +
     scale_x_discrete(breaks = qtr.seq[1:9], drop = FALSE) +
     scale_color_manual("Regimen", values = colorwheel[1:4]) +
-    scale_size_continuous("Number of Patients",
-                          limits = c(1, max(ltbi_plot$n, na.rm = TRUE)),
-                          breaks = ltbi_breaks) +
+    scale_size_area("Number of Patients",
+                    limits = c(1, max(ltbi_plot$n, na.rm = TRUE)),
+                    breaks = ltbi_breaks) +
     scale_linetype_discrete("Regimen") +
     labs(x = "Quarter",
          y = "Percent Completed") +
