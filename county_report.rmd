@@ -454,7 +454,7 @@ nat_melt$variable[nat_melt$variable %in% "national_average"] <-
 nat_melt$variable[nat_melt$variable %in% "target_2015"] <- 
     "National 2015 Target* (93%)"
 
-act_comp$variable <- "Cases in County"
+act_comp$variable <- paste(x$hd_tag, "Active TB Patients")
 
 names(nat_melt)[names(nat_melt) %in% "value"] <- "per_complete"
 
@@ -537,7 +537,7 @@ ltbi_comp <- ddply(subset(plans_trim,
 
 
 # Add a label for plotting
-ltbi_comp$label <- paste(x$hd_label, "LTBI Patients")
+ltbi_comp$label <- paste(x$hd_tag, "LTBI Patients")
 
 # Add the national target
 ltbi_plot <- rbind(ltbi_comp[ , c("plot_qtr", "label", "per_complete")],
