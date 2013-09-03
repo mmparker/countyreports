@@ -324,10 +324,7 @@ plan_summary <- ddply(plan_starts_co,
                       .fun = summarise,
 
                       Active = sum(treat_plan_type %in% "Active"),
-                      LTBI = sum(treat_plan_type %in% "LTBI"),
-                      RIF = sum(ltbi_drug %in% "RIF"),
-                      INH = sum(ltbi_drug %in% "INH"),
-                      `INH/Rifapentine` = sum(ltbi_drug %in% "INH/Rifapentine")
+                      LTBI = sum(treat_plan_type %in% "LTBI")
 )
 
 
@@ -377,7 +374,7 @@ ggplot(act_ltbi_init, aes(x = plot_qtr, y = value, group = variable, color = var
 ```{r tx_init_table, results='asis'}
 
 # Pretty names
-names(plan_summary) <- c("Quarter", "Active", "LTBI", "Rifampin", "INH", "INH/Rifapentine")
+names(plan_summary) <- c("Quarter", "Active", "LTBI")
 
 dfprintif(plan_summary)
 
@@ -523,7 +520,7 @@ plans_trim <-
 # Calculate completion rates for latent tx
 ltbi_comp <- ddply(subset(plans_trim, 
                           ltbi_drug %in% c("RIF", "INH", "INH/Rifapentine")),
-                   .var = c("ltbi_drug", "plot_qtr"),
+                   .var = "plot_qtr",
                    .drop = FALSE,
                    .fun = summarise,
                    
@@ -539,21 +536,24 @@ ltbi_comp <- ddply(subset(plans_trim,
 )
 
 
+# Add a label for plotting
+ltbi_comp$label <- paste(x$hd_label, "LTBI Patients")
+
 # Add the national target
-ltbi_plot <- rbind(ltbi_comp[ , c("plot_qtr", "ltbi_drug", "per_complete")],
+ltbi_plot <- rbind(ltbi_comp[ , c("plot_qtr", "label", "per_complete")],
                    data.frame(plot_qtr = sort(unique(ltbi_comp[ , "plot_qtr"])),
-                              ltbi_drug = "National 2015 Target* (79%)",
+                              label = "National 2015 Target* (79%)",
                               per_complete = 79)
 )
 
 
 # Plot it
 ggplot(ltbi_plot, aes(x = plot_qtr, 
-                      y = as.numeric(per_complete), 
-                      group = ltbi_drug, 
-                      color = ltbi_drug)) +
+                      y = as.numeric(per_complete),
+                      group = label,
+                      color = label)) +
     geom_point(size = point_size) +
-    geom_line(aes(linetype = ltbi_drug), size = line_size) +
+    geom_line(aes(linetype = label), size = line_size) +
     expand_limits(y = c(0, 100)) +
     scale_x_discrete(breaks = qtr.seq[1:9], drop = FALSE) +
     scale_color_manual("Regimen", values = colorwheel[1:4]) +
@@ -570,14 +570,14 @@ ggplot(ltbi_plot, aes(x = plot_qtr,
 ```{r ltbi_comp_table, results='asis'}
 
 # Set up a version to print
-ltbi_print <- ltbi_comp[ , c("ltbi_drug", "plot_qtr", "n", 
+ltbi_print <- ltbi_comp[ , c("plot_qtr", "n", 
                              "n_complete", "per_complete", 
                              "n_incomplete", "per_incomplete",
                              "n_ongoing", "per_ongoing")]
 
 
 # Pretty names
-names(ltbi_print) <- c("LTBI Regimen", "Quarter", "N Started", 
+names(ltbi_print) <- c("Quarter", "N Started", 
                        "N Completed", "% Complete",
                        "N Not Completed", "% Not Completed",
                        "N Ongoing", "% Ongoing")
