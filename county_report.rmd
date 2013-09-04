@@ -226,7 +226,10 @@ ggplot(visitagg, aes(x = plot_qtr,
 ```{r visits_table, results='asis'}
 
 # Cast visits wide
-visits_wide <- dcast(visitagg, plot_qtr ~ location, value.var = "freq")
+visits_wide <- dcast(visitagg, 
+                     plot_qtr ~ location,
+                     value.var = "freq",
+                     fill = "0")
 
 # Pretty-print
 names(visits_wide) <- c("Quarter", "Total Visits", "Clinic Visits", "Outreach Visits")
@@ -284,7 +287,10 @@ ggplot(testagg, aes(x = plot_qtr, y = freq, group = test, color = test)) +
 ```{r screens_table, results='asis'}
 
 # Cast tests wide
-tests_wide <- dcast(testagg, plot_qtr ~ test, value.var = "freq")
+tests_wide <- dcast(testagg, 
+                    plot_qtr ~ test, 
+                    value.var = "freq",
+                    fill = "0")
 
 # Pretty-print
 names(tests_wide) <- c("Quarter", "CXRs", "QFTs", "TSTs")
